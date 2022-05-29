@@ -315,7 +315,7 @@
     ";
 
     $stmt_updated = $conn->prepare($sql_select_updated);
-    $stmt_updated->bindParam(":id", $last_id);
+    $stmt_updated->bindParam(":id", $word->id);
 
     try {
       $stmt_updated->execute();

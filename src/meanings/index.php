@@ -173,6 +173,29 @@
       echo json_encode($res);
       return;
     }
+
+    $sql_select_inserted = "
+      SELECT
+        id, language, word, type, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion, priority
+
+      FROM words
+
+      WHERE
+        id = :id;
+    ";
+    $stmt_inserted = $conn->prepare($sql_select_inserted);
+    $stmt_inserted->bindParam(":id", $last_id);
+
+    try {
+      $stmt_inserted->execute();
+      $res = $stmt_inserted->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+      $res->error = $e;
+      echo json_encode($res);
+      return;
+    }
+
+    echo json_encode($res[0]);
   }
 
 
@@ -180,12 +203,12 @@
     $values = array();
 
     foreach($wordsOrCategories as $i => $item) {
-      $values[] = "( :meaningId" . $i . ", :bindToId" . $i . " )"
+      $values[] = "( :meaningId" . $i . ", :bindToId" . $i . " )";
     }
 
     $stmt_insert = $conn->prepare(
-      $statementStart . join($values, ', ') . ";";
-    )
+      $statementStart . join($values, ', ') . ";"
+    );
 
     foreach($wordsOrCategories as $i => $item) {
       $stmt_insert->bindParam(":meaningId" . $i, $meaningId);
