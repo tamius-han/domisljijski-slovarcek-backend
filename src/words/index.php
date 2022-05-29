@@ -1,5 +1,5 @@
 <?php
-  // ENDPOINT: api/words 
+  // ENDPOINT: api/words
   //
   // just to set the record straight:
   //  * node <3
@@ -9,316 +9,62 @@
   //  * i'd do a proper api /w express and node but again, my
   //    webhost only does php
   header('Content-Type: application/json');
-  
+
   function isValidJSON($str) {
     json_decode($str);
     return json_last_error() == JSON_ERROR_NONE;
   }
-  
-  function getWordById($id, $language) {
-    include '../conf/db-config.php';
-    
-    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    
-    if ($conn->connect_error) {
-      die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
-    }
 
-    
-    
-    
-    $sql_select_word = "
-      SELECT
-        src.id AS src_id,
-        src.word AS src_word,
-        src.word_m AS src_word_m,
-        src.word_f AS src_word_f,
-        src.word_plural AS src_word_plural,
-        src.description AS src_description,
-        src.notes AS src_notes,
-        src.rfc AS src_rfc
-      
-      FROM " . $wordlistTable . " src
-      
-      WHERE
-        src.id = :id;
-    ";
-    
-    $sql_select_translations = "
-      SELECT
-        tr.id AS tr_id,
-        tr.translation_priority AS tr_priority,
-        tr.rfc AS tr_rfc,
-        tr.notes AS tr_notes,
-        
-        target.id AS target_id,
-        target.word AS target_word,
-        target.word_f AS target_word_f,
-        target.word_m AS target_word_m,
-        target.word_plural AS target_word_plural,
-        target.rfc AS target_rfc,
-        target.description AS target_description,
-        target.notes AS target_notes
-    
-      FROM " . $wordlistTable . " src
-        LEFT JOIN translation tr ON src.id = tr." . $srcLang . "_id
-        LEFT JOIN " . $endTable . " target ON target.id = tr." . $endLang . "_id
-      
-      WHERE
-        src.id = :id
-      
-      ORDER BY tr_priority ASC
-      LIMIT 0, 16;
-    ";
-    
-    
-    $stmt_word = $conn->prepare($sql_select_word);
-    $stmt_translations = $conn->prepare($sql_select_translations);
-    
-    try {
-      $stmt_word->bindParam(":id", $id);
-      $stmt_translations->bindParam(":id", $id);
-    } catch (Exception $e) {
-      echo json_encode($e);
-      return;
-    }
-    
-    
-    $res = new stdClass();
-    
-    try {
-      $stmt_word->execute();
-      $stmt_translations->execute();
-      $res->word = $stmt_word->fetchAll(PDO::FETCH_ASSOC)[0];
-      $res->translations = $stmt_translations->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-      $res->error = $e;
-    }
-    
-    echo json_encode($res);
-  }
-  
-  function listWords($filter) {
-    include '../conf/db-config.php';
-    
-    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    
-    if ($conn->connect_error) {
-      die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
-    }
-    
-    $sql_select_word = "
-      SELECT
-        word.id as id,
-        word.language as language,
-        word.word as word,
-        word.altSpellings as altSpellings,
-        word.type,
-        word.genderExtras,
-        word.notes,
-        word.credit,
-        word.communitySuggestion,
-        
-        meaning.id as meaningId,
-        meaning.meaning as meaning,
-        meaning.notes as meaningNotes,
-        meaning.priority as meaningPriority,
-        meaning.communitySuggestion as meaningCommunitySuggestion,
-        
-        category.id as categoryId,
-        category.nameEn as categoryNameEn,
-        category.nameSl as categoryNameSl
-        
-        FROM 
-          words word
-          LEFT JOIN words2meanings w2m_src ON w2m_src.word_id = word.id
-          LEFT JOIN meanings meaning ON meaning.id = w2m_src.meaning_id
-          LEFT JOIN meanings2categories m2c ON m2c.meaning_id = meaning.id
-          LEFT JOIN categories category ON category.id = m2c.category_id
-          
-        GROUP BY
-          word.id, meaning.id
-        
-      ";
-      
-      $sql_count = "
-        SELECT COUNT(*) as count
-        
-        FROM words
-      ";
-        
-//         srcMeaning.id as meaningId,
-//         srcMeaning.meaning as meaning,
-//         srcMeaning.notes as meaningNotes,
-//         srcMeaning.priority as meaningPriority,
-//         srcMeaning.communitySuggestion as meaningCommunitySuggestion,
-//         
-//         translatedMeaning.id as translatedMeaningId,
-//         translatedMeaning.meaning as translatedMeaning,
-//         translatedMeaning.notes as translatedMeaningNotes,
-//         translatedMeaning.priority as translatedMeaningPriority,
-//         translatedMeaning.communitySuggestion as meaningCommunitySuggestion,
-//         
-//         translatedWord.id as translatedWordId,
-//         translatedWord.language as translatedLanguage,
-//         translatedWord.word as translatedWord,
-//         translatedWord.notes as translatedWordNotes,
-//         translatedWord.genderExtras as translatedWordGenderExtras,
-
-    $stmt = $conn->prepare($sql_select_word);
-    $stmt_count = $conn->prepare($sql_count);
-    
-    try {
-      $stmt->execute();
-      $stmt_count->execute();
-      
-      $words = $stmt->fetchAll(PDO::FETCH_ASSOC);
-      $total = $stmt_count->fetchAll(PDO::FETCH_ASSOC);
-      
-      $res->words = $words;
-      $res->total = $total;
-    } catch (Exception $e) {
-      $res->error = $e;
-      $res->stmt = $stmt;
-    }
-    
-    header('Content-Type: application/json');
-    echo json_encode($res);
-  }
-  
-  function getWord($search, $language, $withTranslations = false) {
-    include '../conf/db-config.php';
-    
-    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    
-    if ($conn->connect_error) {
-      die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
-    }
-    
-    $wordlistTable = "wordlist_en";
-    $endTable = "wordlist_sl";
-    $srcLang = "en";
-    $endLang = "si";
-    
-    if ($language == "sl") {
-      $wordlistTable = "wordlist_sl";
-      $endTable = "wordlist_en";
-      $srcLang = "sl";
-      $endLang = "en";
-    }
-    
-    // get query params
-    
-    if (empty($search)) {
-      return null;
-    }
-    
-    $sql_select_common = "
-      SELECT
-        id, word, word_m, word_f, word_plural, description, notes, rfc
-                
-      FROM " . $wordlistTable . "
-      
-      WHERE
-        word LIKE CONCAT(:search, '%')
-        
-      LIMIT 0, 16;
-    ";
-    
-    $sql_select_translations = "
-      SELECT
-        src.id AS src_id,
-        
-        tr.id AS tr_id,
-        tr.translation_priority AS tr_priority,
-        tr.rfc AS tr_rfc,
-        tr.notes AS tr_notes,
-        
-        target.id AS target_id,
-        target.word AS target_word,
-        target.word_f AS target_word_f,
-        target.word_m AS target_word_m,
-        target.word_plural AS target_word_plural,
-        target.rfc AS target_rfc,
-        target.description AS target_description,
-        target.notes AS target_notes
-      
-      FROM " . $wordlistTable . " src
-        LEFT JOIN translation tr ON src.id = tr." . $srcLang . "_id
-        LEFT JOIN " . $endTable . " target ON target.id = tr." . $endLang . "_id
-        
-      WHERE
-        word LIKE CONCAT(:search, '%')
-      GROUP BY
-        src.id
-    ";
-    
-    $stmt_en2si = $conn->prepare($sql_select_common);
-    
-    
-    try {
-      $stmt_en2si->bindParam(":search", $search);
-    } catch (Exception $e) {
-      echo json_encode($e);
-      return;
-    }
-
-    
-    $res = new stdClass();
-    
-    if ($withTranslations == true) {
-      $stmt_translations = $conn->prepare($sql_select_translations);
-      
-      try {
-        $stmt_translations->bindParam(":search", $search);
-        $stmt_translations->execute();
-        $stmt_en2si->execute();
-        
-        
-        $res->words = $stmt_en2si->fetchAll(PDO::FETCH_ASSOC);
-        $res->translations = $stmt_translations->fetchAll(PDO::FETCH_ASSOC);
-      } catch (Exception $e) {
-        $res->error = $e;
-      }
-    } else {
-      try {
-        $stmt_en2si->execute();
-        $res = $stmt_en2si->fetchAll(PDO::FETCH_ASSOC);
-      } catch (Exception $e) {
-        $res->error = $e;
-      }
-    }
-      
-    echo json_encode($res);
-  }
-  
-  function addWord($word, $language, $authToken) {
+  /**
+   * Inserts a new word into the database.
+   *
+   * $word needs to have the following parameters:
+   *    - ID: you're using the wrong endpoint for that, m9
+   *    - credit_userId: should be added by the backend (but is currently not)
+   *
+   * MANDATORY FIELDS:
+   *    - language: 'si' | 'en'
+   *    - word: string
+   *      the word we're adding
+   *    - type: number
+   *      (see: enum WordType on frontend!)
+   *
+   * OPTIONAL FIELDS
+   *    - alternativeSpellings: string
+   *      alternative spellings of a word. Will be displayed on frontend.
+   *
+   *    - alternativeSpellingsHidden:
+   *      common incorrect spellings of a word, if any.
+   *      Used for search, but frontend shouldn't display that.
+   *
+   *    - genderExtras: json string (NOT json proper!)
+   *      alternative gender-based spellings. More or less only present on slovenian words,
+   *      where genderExtras _should_ be present where applicable, but that's a CoC issue
+   *
+   *    - notes: string
+   *      any other notes regarding word
+   *
+   *    - credit: string
+   *      user credit
+   *
+   *    - communitySuggestion: boolean
+   *      should be restricted to certain users
+   *
+   *    - priority: number
+   *      deprecated af
+   **/
+  function addWord($word, $authToken) {
     include '../conf/db-config.php';
     include '../lib/auth.php';
-    
-    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    
-    if ($conn->connect_error) {
-      die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
-      return;
-    }
-    $res = new stdClass();
-    
+
+    // ------------------------------------------------------------------------------------------------- [ AUTHORIZATION
     if (empty($authToken)) {
       $res->errorCode = "401";
       $res->error = "User is not logged in.";
       die(json_encode($res));
       return;
     }
-    
+
     // TODO: check permissions
     $user = getUser($authToken);
     if (!empty($user->error)) {
@@ -328,94 +74,92 @@
       $res->user = $user;
       die(json_encode($res));
     }
-    
+
+    // ------------------------------------------------------------------------------------------------- [ DATA VALIDATION
     // validate data and stuff
     if (empty($word) || empty($language)) {
       $res->erorr = "Request is either missing word or language.";
       echo json_encode($res);
       return;
     }
-    
-    if ($language == "sl") {
-      $wordlistTable = "wordlist_sl";
-    } else if ($language == "en") {
-      $wordlistTable = "wordlist_en";
-    } else {
-      $res->error = "Invalid language provided. Valid values: 'en', 'sl'.";
-      echo json_encode($res);
+
+    // ------------------------------------------------------------------------------------------------- [ ESTABLISH DB CONNECTION
+    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+
+    if ($conn->connect_error) {
+      die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
       return;
     }
-    
-    $sql_select_insert = "
-      INSERT INTO " . $wordlistTable . " (word, word_m, word_f, word_plural, description, notes, rfc)
-        VALUES (:word, :word_m, :word_f, :word_plural, :description, :notes, :rfc);
+    $res = new stdClass();
+
+
+    // ------------------------------------------------------------------------------------------------- [ BUILD QUERY AND BIND PARAMS
+    $values = array();
+
+    $values[] = ":language, :word, :type";
+    if (empty($word->altSpellings))       { $values[] = "NULL"; } else { $values[] = ":altSpellings"; }
+    if (empty($word->altSpellingsHidden)) { $values[] = "NULL"; } else { $values[] = ":altSpellingsHidden"; }
+    if (empty($word->genderExtras))       { $values[] = "NULL"; } else { $values[] = ":genderExtras"; }
+    if (empty($word->notes))              { $values[] = "NULL"; } else { $values[] = ":notes"; }
+    if (empty($word->credit))             { $values[] = "NULL"; } else { $values[] = ":credit"; }
+
+    // TODO: add credit based on authentication.
+    // Also TODO: add words as communitySuggestion unless user has sufficient perms
+    // Also TODO: only trusted users should have the permission to set word priority
+    // Also TODO: priority should be moved to meanings2words table
+    if (true)                             { $values[] = "NULL"; } else { $values[] = ":credit_userId"; }
+    if (true)                             { $values[] = 0;      } else { $values[] = ":communitySuggestion"; }
+    if (empty($word->priority))           { $values[] = 0;      } else { $values[] = ":priority"; }
+
+
+    $sql_insert = "
+      INSERT INTO words (language, word, type, altSpellings, altSpellingsHidden, genderExtras, notes, credit, credit_userId, communitySuggestion, priority)
+        VALUES (" . join(", ", $values) . ");
     ";
-    
-    $sql_select_update = "
-      UPDATE " . $wordlistTable . "
-      SET
-        word        = :word, 
-        word_m      = :word_m,
-        word_f      = :word_f,
-        word_plural = :word_plural,
-        description = :description,
-        notes       = :notes,
-        rfc         = :rfc
-        
-      WHERE
-        id = :id;
-    ";
-    
-    if (empty($word->id)) {
-      $stmt_en2si = $conn->prepare($sql_select_insert);
-    } else {
-      $stmt_en2si = $conn->prepare($sql_select_update);
-    }
-    
-    try {
-      $stmt_en2si->bindParam(":word", $word->word);
-      $stmt_en2si->bindParam(":word_m", $word->word_m);
-      $stmt_en2si->bindParam(":word_f", $word->word_f);
-      $stmt_en2si->bindParam(":word_plural", $word->word_plural);
-      $stmt_en2si->bindParam(":description", $word->description);
-      $stmt_en2si->bindParam(":notes", $word->notes);
-      $stmt_en2si->bindParam(":rfc", $word->rfc);
-      
-      if (!empty($word->id)) {
-        $stmt_en2si->bindParam(":id", $word->id);
-      }
-    } catch (Exception $e) {
-      echo json_encode($e);
-    }
-    
+
+    $stmt_insert = $conn->prepare($sql_insert);
+
+    $stmt_insert->bindParam(":language", $word->language);
+    $stmt_insert->bindParam(":word", $word->word);
+    $stmt_insert->bindParam(":type", $word->type);
+
+    if (!empty($word->altSpellings))        { $stmt_insert->bindParam(":altSpellings", $word->altSpellings); }
+    if (!empty($word->altSpellingsHidden))  { $stmt_insert->bindParam(":altSpellingsHidden", $word->altSpellingsHidden); }
+    if (!empty($word->genderExtras))        { $stmt_insert->bindParam(":genderExtras", $word->genderExtras); }
+    if (!empty($word->notes))               { $stmt_insert->bindParam(":notes", $word->notes); }
+    if (!empty($word->credit))              { $stmt_insert->bindParam(":credit", $word->credit); }
+    // todo: bind user credit?
+    // todo: bind communitySuggestion
+    // todo: move priority to other table, priority should be set during bind in words2meanings table
+    if (!empty($word->priority))            { $stmt_insert->bindParam(":priority", $word->priority); }
+
+
     // insert new value:
     try {
-      $stmt_en2si->execute();
+      $stmt_insert->execute();
     } catch (Exception $e) {
       $res->error = $e;
       echo json_encode($res);
       return;
     }
-    
-    // get newly inserted value from base, as it was inserted
-    if (empty($word->id)) {
-      $last_id = $conn->lastInsertId();
-    } else {
-      $last_id = $word->id;
-    }
-    
+
+    // return the inserted value to backend:
+    $last_id = $conn->lastInsertId();
+
     $sql_select_inserted = "
       SELECT
-        id, word, word_m, word_f, word_plural, description, notes, rfc
-      
-      FROM " . $wordlistTable . "
-      
+        id, language, word, type, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion, priority
+
+      FROM words
+
       WHERE
         id = :id;
     ";
     $stmt_inserted = $conn->prepare($sql_select_inserted);
     $stmt_inserted->bindParam(":id", $last_id);
-    
+
     try {
       $stmt_inserted->execute();
       $res = $stmt_inserted->fetchAll(PDO::FETCH_ASSOC);
@@ -424,24 +168,60 @@
       echo json_encode($res);
       return;
     }
-    
+
     echo json_encode($res[0]);
   }
-  
+
+  /**
+   * Edits an existing word in the database
+   *
+   * $word needs to have the following parameters:
+   *    - credit_userId: should be added by the backend (but is currently not)
+   *
+   * MANDATORY FIELDS:
+   *    - id: the word we're editing
+   *    - language: 'si' | 'en'
+   *    - word: string
+   *      the word we're adding
+   *    - type: number
+   *      (see: enum WordType on frontend!)
+   *
+   * OPTIONAL FIELDS
+   *    - alternativeSpellings: string
+   *      alternative spellings of a word. Will be displayed on frontend.
+   *
+   *    - alternativeSpellingsHidden:
+   *      common incorrect spellings of a word, if any.
+   *      Used for search, but frontend shouldn't display that.
+   *
+   *    - genderExtras: json string (NOT json proper!)
+   *      alternative gender-based spellings. More or less only present on slovenian words,
+   *      where genderExtras _should_ be present where applicable, but that's a CoC issue
+   *
+   *    - notes: string
+   *      any other notes regarding word
+   *
+   *    - credit: string
+   *      user credit
+   *
+   *    - communitySuggestion: boolean
+   *      should be restricted to certain users
+   *
+   *    - priority: number
+   *      deprecated af
+   **/
   function editWord($word, $authToken) {
-    return addWord($word, $word->languageKey, $authToken);
-  }
-  
-  function deleteWord($wordId, $languageCode, $authToken) {
     include '../conf/db-config.php';
     include '../lib/auth.php';
-    
+
+    // ------------------------------------------------------------------------------------------------- [ AUTHORIZATION
     if (empty($authToken)) {
       $res->errorCode = "401";
       $res->error = "User is not logged in.";
       die(json_encode($res));
+      return;
     }
-    
+
     // TODO: check permissions
     $user = getUser($authToken);
     if (!empty($user->error)) {
@@ -451,18 +231,135 @@
       $res->user = $user;
       die(json_encode($res));
     }
-    
+
+    // ------------------------------------------------------------------------------------------------- [ DATA VALIDATION
+    // validate data and stuff
+    if (empty($word) || empty($language)) {
+      $res->erorr = "Request is either missing word or language.";
+      echo json_encode($res);
+      return;
+    }
+
+    // ------------------------------------------------------------------------------------------------- [ ESTABLISH DB CONNECTION
     $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    
+
     if ($conn->connect_error) {
       die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
       return;
     }
-    
     $res = new stdClass();
-    
+
+    // ------------------------------------------------------------------------------------------------- [ BUILD QUERY AND BIND PARAMS
+    $values = array();
+
+    $values[] = ":language, :word, :type";
+    if (empty($word->altSpellings))       { $values[] = "altSpellings = NULL"; }        else { $values[] = "altSpellings = :altSpellings"; }
+    if (empty($word->altSpellingsHidden)) { $values[] = "altSpellingsHidden = NULL"; }  else { $values[] = "altSpellingsHidden = :altSpellingsHidden"; }
+    if (empty($word->genderExtras))       { $values[] = "genderExtras = NULL"; }        else { $values[] = "genderExtras = :genderExtras"; }
+    if (empty($word->notes))              { $values[] = "notes = NULL"; }               else { $values[] = "notes = :notes"; }
+    if (empty($word->credit))             { $values[] = "credit = NULL"; }              else { $values[] = "credit = :credit"; }
+
+    // TODO: add credit based on authentication.
+    // Also TODO: add words as communitySuggestion unless user has sufficient perms
+    // Also TODO: only trusted users should have the permission to set word priority
+    // Also TODO: priority should be moved to meanings2words table
+    if (true)                             { $values[] = "credit_userId = NULL"; }       else { $values[] = "credit_userId = :credit_userId"; }
+    if (true)                             { $values[] = "communitySuggestion = 0"; }    else { $values[] = "communitySuggestion = :communitySuggestion"; }
+    if (empty($word->priority))           { $values[] = "priority = 0"; }               else { $values[] = "priority = :priority"; }
+
+
+    $sql_update = "
+      UPDATE words
+        SET " . join(", ", $values) . "
+        WHERE id = :id;
+    ";
+
+    $stmt_update = $conn->prepare($sql_update);
+
+    $stmt_update->bindParam(":language", $word->language);
+    $stmt_update->bindParam(":word", $word->word);
+    $stmt_update->bindParam(":type", $word->type);
+
+    if (!empty($word->altSpellings))        { $stmt_update->bindParam(":altSpellings", $word->altSpellings); }
+    if (!empty($word->altSpellingsHidden))  { $stmt_update->bindParam(":altSpellingsHidden", $word->altSpellingsHidden); }
+    if (!empty($word->genderExtras))        { $stmt_update->bindParam(":genderExtras", $word->genderExtras); }
+    if (!empty($word->notes))               { $stmt_update->bindParam(":notes", $word->notes); }
+    if (!empty($word->credit))              { $stmt_update->bindParam(":credit", $word->credit); }
+    // todo: bind user credit?
+    // todo: bind communitySuggestion
+    // todo: move priority to other table, priority should be set during bind in words2meanings table
+    if (!empty($word->priority))            { $stmt_update->bindParam(":priority", $word->priority); }
+
+    $stmt_update->bindParam(":id", $word->id);
+
+    // update the word
+    try {
+      $stmt_update->execute();
+    } catch (Exception $e) {
+      $res->error = $e;
+      echo json_encode($res);
+      return;
+    }
+
+    // return the updated word to backend
+    $sql_select_updated = "
+      SELECT
+        id, language, word, type, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion, priority
+
+      FROM words
+
+      WHERE
+        id = :id;
+    ";
+
+    $stmt_updated = $conn->prepare($sql_select_updated);
+    $stmt_updated->bindParam(":id", $last_id);
+
+    try {
+      $stmt_updated->execute();
+      $res = $stmt_updated->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+      $res->error = $e;
+      echo json_encode($res);
+      return;
+    }
+
+    echo json_encode($res[0]);
+  }
+
+  function deleteWord($wordId, $languageCode, $authToken) {
+    include '../conf/db-config.php';
+    include '../lib/auth.php';
+
+    if (empty($authToken)) {
+      $res->errorCode = "401";
+      $res->error = "User is not logged in.";
+      die(json_encode($res));
+    }
+
+    // TODO: check permissions
+    $user = getUser($authToken);
+    if (!empty($user->error)) {
+      $res->errorCode = "403";
+      $res->error = "There's problems with the JWT token.";
+      $res->jwt = $authToken;
+      $res->user = $user;
+      die(json_encode($res));
+    }
+
+    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+
+    if ($conn->connect_error) {
+      die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
+      return;
+    }
+
+    $res = new stdClass();
+
     if (empty($wordId)) {
       $res->error = "Word ID must be provided";
       echo json_encode($res);
@@ -484,9 +381,9 @@
       echo json_encode($res);
       return;
     }
-    
+
     $stmt_en2si = $conn->prepare($sql_delete);
-    
+
     try {
       $stmt_en2si->bindParam(":id", $wordId);
       $stmt_en2si->execute();
@@ -495,32 +392,32 @@
       echo json_encode($res);
       return;
     }
-    
+
     $res->message = "ok";
     $res->langKey = $languageCode;
     $res->wordId = $wordId;
     echo json_encode($res);
   }
-  
-  
+
+
   if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $search = $_GET['s'];
     $language = $_GET['lang'];
     $id = $_GET['id'];
-    
+
     if (empty($id)) {
       listWords(null);
     } else {
       getWordById($id, $language);
     }
-    
+
   }
-  
+
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $headers = apache_request_headers();
-    
+
     $json_params = file_get_contents("php://input");
-    
+
     if (strlen($json_params) > 0 && isValidJSON($json_params)) {
       $decoded_params = json_decode($json_params);
     } else {
@@ -528,13 +425,13 @@
       echo json_encode($response);
       return;
     }
-    
+
     $response = new stdClass();
-    
+
     if (isset($headers['Authorization'])) {
       $response->message="authorization header present!";
       $response->postJson=$decoded_params;
-      
+
       if (empty($decoded_params->id)) {
         addWord($decoded_params, $decoded_params->lang, $headers['Authorization']);
       } else {
@@ -543,17 +440,17 @@
     } else {
       $response->errorCode = 403;
       $response->error = "Authorization header not present";
-      
+
       echo json_encode($response);
       return;
     }
   }
-  
+
   if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $headers = apache_request_headers();
-    
+
     $json_params = file_get_contents("php://input");
-    
+
     if (strlen($json_params) > 0 && isValidJSON($json_params)) {
       $decoded_params = json_decode($json_params);
     } else {
@@ -561,18 +458,18 @@
       echo json_encode($response);
       return;
     }
-    
+
     $response = new stdClass();
-    
+
     if (isset($headers['Authorization'])) {
       $response->message="authorization header present!";
       $response->postJson=$decoded_params;
-      
+
       deleteWord($decoded_params->id, $decoded_params->lang, $headers['Authorization']);
     } else {
       $response->errorCode = 403;
       $response->error = "Authorization header not present";
-      
+
       echo json_encode($response);
       return;
     }
