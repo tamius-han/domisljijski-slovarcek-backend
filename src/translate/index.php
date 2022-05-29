@@ -134,6 +134,14 @@
       
       // if we query by any combination of params involving word ID, our query
       // can be much simpler
+
+
+      if ( count($sql_where_array) == 0 ) {
+        // if sql array is empty, we'll get a syntax error. Instead of fixing it proper,
+        // let's fix it the quick, hacky, ghetto way
+        $sql_where_array[] = "TRUE";
+      }
+
       if (!empty($word)) {
         $sql_common_join = $sql_common_join . "  WHERE " . join(" AND ", $sql_where_array);
       } else {
