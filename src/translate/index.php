@@ -70,7 +70,7 @@
         sourceWord.altSpellings as altSpellings,
         sourceWord.genderExtras as genderExtras,
         sourceWord.notes as notes,
-        sourceWord.etymology as etymology
+        sourceWord.etymology as etymology,
         sourceWord.credit as credit,
         sourceWord.communitySuggestion as communitySuggestion,
 
@@ -92,7 +92,7 @@
         translatedWord.credit as translatedWordCredit,
         translatedWord.notes as translatedWordNotes,
         translatedWord.etymology as translatedWordEtymology,
-        w2m_dst.wordPriority as translatedWordPriority
+        w2m_dst.word_priority as translatedWordPriority,
 
         category.id as categoryId,
         category.parentId as categoryParentId,
@@ -171,7 +171,7 @@
       // we only order in select queries, but not in count queries
       $sql_order_word = "
         ORDER BY
-          meaningPriority ASC, translatedMeaningPriority ASC, translatedWordPriority ASC
+          meaningPriority ASC, translatedWordPriority ASC
       ";
 
     // i hope my employer isn't checking my github lol
