@@ -209,11 +209,11 @@ function listCategories() {
       categories
   ";
 
-  $stmt = $conn->prepare($sql_select);
+  $stmt_select = $conn->prepare($sql_select);
 
   try {
-    $stmt_inserted->execute();
-    $res = $stmt_inserted->fetchAll(PDO::FETCH_ASSOC);
+    $stmt_select->execute();
+    $res = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
   } catch (Exception $e) {
     $res->error = $e;
     echo json_encode($res);
