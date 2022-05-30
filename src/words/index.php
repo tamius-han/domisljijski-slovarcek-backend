@@ -50,8 +50,6 @@
    *    - communitySuggestion: boolean
    *      should be restricted to certain users
    *
-   *    - priority: number
-   *      deprecated af
    **/
   function addWord($word, $authToken) {
     include '../conf/db-config.php';
@@ -61,6 +59,7 @@
 
     // ------------------------------------------------------------------------------------------------- [ AUTHORIZATION
     if (empty($authToken)) {
+      http_response_code(401);
       $res->errorCode = "401";
       $res->error = "User is not logged in.";
       die(json_encode($res));
@@ -70,6 +69,7 @@
     // TODO: check permissions
     $user = getUser($authToken);
     if (!empty($user->error)) {
+      http_response_code(403);
       $res->errorCode = "403";
       $res->error = "There's problems with the JWT token.";
       $res->jwt = $authToken;
@@ -79,8 +79,9 @@
 
     // ------------------------------------------------------------------------------------------------- [ DATA VALIDATION
     // validate data and stuff
-    if (empty($word) || empty($language)) {
+    if (empty($word) || empty($word->language) || empty($word->word)) {
       $res->erorr = "Request is either missing word or language.";
+      http_response_code(422);
       echo json_encode($res);
       return;
     }
@@ -108,14 +109,12 @@
 
     // TODO: add credit based on authentication.
     // Also TODO: add words as communitySuggestion unless user has sufficient perms
-    // Also TODO: only trusted users should have the permission to set word priority
-    // Also TODO: priority should be moved to meanings2words table
     if (true)                             { $values[] = "NULL"; } else { $values[] = ":credit_userId"; }
     if (true)                             { $values[] = 0;      } else { $values[] = ":communitySuggestion"; }
 
 
     $sql_insert = "
-      INSERT INTO words (language, word, altSpellings, altSpellingsHidden, genderExtras, notes, credit, credit_userId, communitySuggestion, priority)
+      INSERT INTO words (language, word, altSpellings, altSpellingsHidden, genderExtras, notes, etymology, credit, credit_userId, communitySuggestion)
         VALUES (" . join(", ", $values) . ");
     ";
 
@@ -205,9 +204,8 @@
    *    - communitySuggestion: boolean
    *      should be restricted to certain users
    *
-   *    - priority: number
    *      deprecated af
-   **/
+   */
   function editWord($word, $authToken) {
     include '../conf/db-config.php';
     include '../lib/auth.php';
@@ -263,8 +261,6 @@
 
     // TODO: add credit based on authentication.
     // Also TODO: add words as communitySuggestion unless user has sufficient perms
-    // Also TODO: only trusted users should have the permission to set word priority
-    // Also TODO: priority should be moved to meanings2words table
     if (true)                             { $values[] = "credit_userId = NULL"; }       else { $values[] = "credit_userId = :credit_userId"; }
     if (true)                             { $values[] = "communitySuggestion = 0"; }    else { $values[] = "communitySuggestion = :communitySuggestion"; }
 
@@ -325,6 +321,12 @@
     echo json_encode($res[0]);
   }
 
+  /**
+   * Deletes a word from the database.
+   *
+   * TODO: THIS FUNCTION PROBABLY WASN'T PORTED TO v2 DATABASE
+   * IMPLEMENTATION HAS TO BE UPDATED
+   */
   function deleteWord($wordId, $languageCode, $authToken) {
     include '../conf/db-config.php';
     include '../lib/auth.php';
@@ -355,7 +357,6 @@
       die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
       return;
     }
-
 
     if (empty($wordId)) {
       $res->error = "Word ID must be provided";
@@ -396,18 +397,16 @@
     echo json_encode($res);
   }
 
-
   if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $search = $_GET['s'];
     $language = $_GET['lang'];
     $id = $_GET['id'];
 
-    if (empty($id)) {
-      listWords(null);
-    } else {
-      getWordById($id, $language);
-    }
-
+    // if (empty($id)) {
+    //   listWords(null);
+    // } else {
+    //   getWordById($id, $language);
+    // }
   }
 
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -418,6 +417,7 @@
     if (strlen($json_params) > 0 && isValidJSON($json_params)) {
       $decoded_params = json_decode($json_params);
     } else {
+      http_response_code(422);
       $response->error="There's been a fucky wucky with the post request.";
       echo json_encode($response);
       return;
@@ -429,11 +429,8 @@
       $response->message="authorization header present!";
       $response->postJson=$decoded_params;
 
-      if (empty($decoded_params->id)) {
-        addWord($decoded_params, $decoded_params->lang, $headers['Authorization']);
-      } else {
-        addWord($decoded_params, $decoded_params->langKey, $headers['Authorization']);
-      }
+      addWord($decoded_params, $headers['Authorization']);
+
     } else {
       $response->errorCode = 403;
       $response->error = "Authorization header not present";
