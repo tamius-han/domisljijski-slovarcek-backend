@@ -62,6 +62,8 @@
     include '../conf/db-config.php';
     include '../lib/auth.php';
 
+    $res = new stdClass();
+
     //  --------------------------------------------- LOGIN/PERMISSION VALIDATION  ---------------------------------------------
     if (empty($authToken)) {
       $res->errorCode = "401";
@@ -101,7 +103,6 @@
       die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
       return;
     }
-    $res = new stdClass();
 
     // --------------------------------------------- BUILD QUERY AND BIND PARAMS  ---------------------------------------------
     $values = array();

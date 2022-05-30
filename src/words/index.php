@@ -57,6 +57,8 @@
     include '../conf/db-config.php';
     include '../lib/auth.php';
 
+    $res = new stdClass();
+
     // ------------------------------------------------------------------------------------------------- [ AUTHORIZATION
     if (empty($authToken)) {
       $res->errorCode = "401";
@@ -92,8 +94,6 @@
       die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
       return;
     }
-    $res = new stdClass();
-
 
     // ------------------------------------------------------------------------------------------------- [ BUILD QUERY AND BIND PARAMS
     $values = array();
@@ -212,6 +212,8 @@
     include '../conf/db-config.php';
     include '../lib/auth.php';
 
+    $res = new stdClass();
+
     // ------------------------------------------------------------------------------------------------- [ AUTHORIZATION
     if (empty($authToken)) {
       $res->errorCode = "401";
@@ -247,7 +249,6 @@
       die("oopsie whoopsie! php just had a fucky wucky! " . $conn->connect_error);
       return;
     }
-    $res = new stdClass();
 
     // ------------------------------------------------------------------------------------------------- [ BUILD QUERY AND BIND PARAMS
     $values = array();
@@ -328,6 +329,8 @@
     include '../conf/db-config.php';
     include '../lib/auth.php';
 
+    $res = new stdClass();
+
     if (empty($authToken)) {
       $res->errorCode = "401";
       $res->error = "User is not logged in.";
@@ -353,7 +356,6 @@
       return;
     }
 
-    $res = new stdClass();
 
     if (empty($wordId)) {
       $res->error = "Word ID must be provided";

@@ -155,7 +155,7 @@
     }
 
     $sql_delete = "
-      DELETE FROM translation
+      DELETE FROM translations
       WHERE meaning_en = :en AND meaning_sl = :sl
     ";
 

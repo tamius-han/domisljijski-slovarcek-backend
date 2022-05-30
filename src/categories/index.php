@@ -53,6 +53,9 @@ function checkUser($authToken) {
 function createCategory($categoryData, $authToken) {
   include '../conf/db-config.php';
   include '../lib/auth.php';
+
+  $res = new stdClass();
+
   checkUser($authToken);
 
   $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -193,6 +196,8 @@ function listCategories() {
   include '../lib/auth.php';
   // checkUser($authToken); // all users can get categories, wtf tam
 
+  $response = new stdClass();
+
   $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
   $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
   $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
@@ -213,14 +218,14 @@ function listCategories() {
 
   try {
     $stmt_select->execute();
-    $res = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
+    $response = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
   } catch (Exception $e) {
-    $res->error = $e;
-    echo json_encode($res);
+    $response->error = $e;
+    echo json_encode($response);
     return;
   }
 
-  echo json_encode($res);
+  echo json_encode($response);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -236,7 +241,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     return;
   }
 
-  $response = new stdClass();
 
   if (isset($headers['Authorization'])) {
     $response->message="authorization header present!";
