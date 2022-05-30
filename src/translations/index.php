@@ -68,8 +68,8 @@
     //  --------------------------------------------- DATA VALIDATION  ---------------------------------------------
     // TODO: validate data and stuff
     if (
-      empty($translation->enId)
-      || empty($translation->slId)
+      empty($translation->meaning_en)
+      || empty($translation->meaning_sl)
     ) {
       $res->error = "Request is missing a word or category associated with this meaning.";
       echo json_encode($res);
@@ -93,8 +93,8 @@
 
     $stmt_en2si = $conn->prepare($sql_select_insert);
 
-    $stmt_en2si->bindParam(":en_id", $translation->enId);
-    $stmt_en2si->bindParam(":sl_id", $translation->slId);
+    $stmt_en2si->bindParam(":en_id", $translation->meaning_en);
+    $stmt_en2si->bindParam(":sl_id", $translation->meaning_sl);
 
     // insert new value:
     try {
@@ -224,7 +224,7 @@
       $response->message="authorization header present!";
       $response->postJson=$decoded_params;
 
-      removeTranslation($decoded_params->enId, $decoded_params->slId, $headers['Authorization']);
+      removeTranslation($decoded_params->meaning_en, $decoded_params->meaning_sl, $headers['Authorization']);
     } else {
       $response->errorCode = 403;
       $response->error = "Authorization header not present";
