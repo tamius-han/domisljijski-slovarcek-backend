@@ -38,17 +38,17 @@ Idealno se najprej preveri, če prevod za besedo v slovarčku že obstaja. Če p
 ## Angleška beseda ne obstaja
 0.  Na frontendu nakucaš angleško besedo, slovensko besedo, ter pomena za vsako besedo. Pomen angleške besede naj bo v angleščini, slovenske v slovenščini.
 1.  Kliče se POST `/words` za obe besedi, vsaka posebej. Nazaj se dobi `word` objekt, ki vsebuje ID.
-2.  Kliče se POST `/meaning`, Angleškemu pomenu se zraven vtakne ID angleške besede, slovenskemu pomenu se pritakne ID slovenske besede. V arrayu (`wordIds`). (V obe zahtevi se doda tudi IDje kategorij, v arrayu, torej `categoryIds`). Nazaj se dobi ID pomena.
-3.  Kliče se POST `/translation`, ki vsebuje `meaning_en` in `meaning_sl`
+2.  Kliče se POST `/meaning`, Angleškemu pomenu se zraven vtakne ID angleške besede, slovenskemu pomenu se pritakne ID slovenske besede. (V obe zahtevi se doda tudi IDje kategorij, v arrayu, torej `categoryIds`). Nazaj se dobi ID pomena.
+3.  Kliče se POST `/translations`, ki vsebuje `meaning_en` in `meaning_sl`
 
 ## Angleška (ali slovenska) beseda obstaja, ampak nima želenega pomena
 
 0. Na frontendu nakucaš 2x pomen (angleški, slovenski), ter besedo (če ta še ne obstaja)
 1. Če manjka beseda se kliče POST `/words`, da se doda beseda. Dobiš nazaj ID.
-1. Kliče se POST `/meaning`. Zraven pomena v angleščini se pritakne ID angleške besede, zraven pomena v slovenščini se pritakne ID slovenske besede. Kot prej, v arrayu. Kot prej se tudi zdaj pritakne categoryIds. Nazaj se dobi ID pomena.
+1. Kliče se POST `/meaning`. Zraven pomena v angleščini se pritakne ID angleške besede, zraven pomena v slovenščini se pritakne ID slovenske besede. Kot prej se tudi zdaj pritakne categoryIds. Nazaj se dobi ID pomena.
 
 ## Prevod obstaja, ampak imam alternativno besedo
 
 0. Dobiš obstoječi prevod. Iz njega pobereš ID od pomenov.
 1. POST `/words` z novo besedo
-2. UPDATE `/meaning`, kjer se na seznam wordId-jev obstoječega pomena doda ID nove besede
+2. POST `/bindMeaning`, z ID besede in pomena
