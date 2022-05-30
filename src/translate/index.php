@@ -68,10 +68,11 @@
         sourceWord.language as language,
         sourceWord.word as word,
         sourceWord.altSpellings as altSpellings,
-        sourceWord.genderExtras,
-        sourceWord.notes,
-        sourceWord.credit,
-        sourceWord.communitySuggestion,
+        sourceWord.genderExtras as genderExtras,
+        sourceWord.notes as notes,
+        sourceWord.etymology as etymology
+        sourceWord.credit as credit,
+        sourceWord.communitySuggestion as communitySuggestion,
 
         meaning.id as meaningId,
         meaning.type as meaningType,
@@ -90,6 +91,7 @@
         translatedWord.genderExtras as translatedWordGenderExtras,
         translatedWord.credit as translatedWordCredit,
         translatedWord.notes as translatedWordNotes,
+        translatedWord.etymology as translatedWordEtymology,
         w2m_dst.wordPriority as translatedWordPriority
 
         category.id as categoryId,

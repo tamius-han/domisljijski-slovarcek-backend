@@ -103,6 +103,7 @@
     if (empty($word->altSpellingsHidden)) { $values[] = "NULL"; } else { $values[] = ":altSpellingsHidden"; }
     if (empty($word->genderExtras))       { $values[] = "NULL"; } else { $values[] = ":genderExtras"; }
     if (empty($word->notes))              { $values[] = "NULL"; } else { $values[] = ":notes"; }
+    if (empty($word->etymology))          { $values[] = "NULL"; } else { $values[] = ":etymology"; }
     if (empty($word->credit))             { $values[] = "NULL"; } else { $values[] = ":credit"; }
 
     // TODO: add credit based on authentication.
@@ -127,6 +128,7 @@
     if (!empty($word->altSpellingsHidden))  { $stmt_insert->bindParam(":altSpellingsHidden", $word->altSpellingsHidden); }
     if (!empty($word->genderExtras))        { $stmt_insert->bindParam(":genderExtras", $word->genderExtras); }
     if (!empty($word->notes))               { $stmt_insert->bindParam(":notes", $word->notes); }
+    if (!empty($word->etymology))           { $stmt_insert->bindParam(":etymology", $word->etymology); }
     if (!empty($word->credit))              { $stmt_insert->bindParam(":credit", $word->credit); }
     // todo: bind user credit?
     // todo: bind communitySuggestion
@@ -146,7 +148,7 @@
 
     $sql_select_inserted = "
       SELECT
-        id, language, word, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion
+        id, language, word, genderExtras, altSpellings, altSpellingsHidden, notes, etymology, credit, credit_userId, communitySuggestion
 
       FROM words
 
@@ -255,6 +257,7 @@
     if (empty($word->altSpellingsHidden)) { $values[] = "altSpellingsHidden = NULL"; }  else { $values[] = "altSpellingsHidden = :altSpellingsHidden"; }
     if (empty($word->genderExtras))       { $values[] = "genderExtras = NULL"; }        else { $values[] = "genderExtras = :genderExtras"; }
     if (empty($word->notes))              { $values[] = "notes = NULL"; }               else { $values[] = "notes = :notes"; }
+    if (empty($word->etymology))          { $values[] = "etymology = NULL"; }           else { $values[] = "etymology = :etymology"; }
     if (empty($word->credit))             { $values[] = "credit = NULL"; }              else { $values[] = "credit = :credit"; }
 
     // TODO: add credit based on authentication.
@@ -279,6 +282,7 @@
     if (!empty($word->altSpellingsHidden))  { $stmt_update->bindParam(":altSpellingsHidden", $word->altSpellingsHidden); }
     if (!empty($word->genderExtras))        { $stmt_update->bindParam(":genderExtras", $word->genderExtras); }
     if (!empty($word->notes))               { $stmt_update->bindParam(":notes", $word->notes); }
+    if (!empty($word->etymology))           { $stmt_update->bindParam(":etymology", $word->etymology); }
     if (!empty($word->credit))              { $stmt_update->bindParam(":credit", $word->credit); }
     // todo: bind user credit?
     // todo: bind communitySuggestion
@@ -297,7 +301,7 @@
     // return the updated word to backend
     $sql_select_updated = "
       SELECT
-        id, language, word, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion
+        id, language, word, genderExtras, altSpellings, altSpellingsHidden, notes, etymology, credit, credit_userId, communitySuggestion
 
       FROM words
 
