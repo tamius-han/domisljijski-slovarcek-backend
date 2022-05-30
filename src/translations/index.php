@@ -86,6 +86,26 @@
       return;
     }
 
+    // check that the languages were given correctly
+    // if "meaning_en" links to a slovenian word, we need to swap meaning_en and meaning_sl
+    $stmt_getLanguage = $conn->prepare("SELECT w.language as language FROM meanings m LEFT JOIN words2meanings wm ON m.id = wm.meaning_id LEFT JOIN words w ON w.id = wm.word_id WHERE m.id = :meaning_id");
+    $stmt_getLanguage->bindParam(':meaning_id', $translation->meaning_en);
+
+    try {
+      $stmt_getLanguage->execute();
+      $res = $stmt_getLanguage->fetch(PDO::FETCH_ASSOC);
+      if ($res->language === 'sl') {
+        $tmp = $translation->meaning_en;
+        $translation->meaning_en = $translation->meaning_sl;
+        $translation->meaning_sl = $tmp;
+      }
+    } catch (Exception $e) {
+      $res->error = $e;
+      http_response_code(422);
+      echo json_encode($res);
+      return;
+    }
+
     $sql_select_insert = "
       INSERT INTO translations (meaning_en, meaning_sl)
         VALUES (:en_id, :sl_id);
