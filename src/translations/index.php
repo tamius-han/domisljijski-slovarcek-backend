@@ -94,7 +94,8 @@
     try {
       $stmt_getLanguage->execute();
       $res = $stmt_getLanguage->fetch(PDO::FETCH_ASSOC);
-      if ($res->language === 'sl') {
+
+      if ($res["language"] == 'sl') {
         $tmp = $translation->meaning_en;
         $translation->meaning_en = $translation->meaning_sl;
         $translation->meaning_sl = $tmp;
@@ -119,23 +120,15 @@
     // insert new value:
     try {
       $stmt_en2si->execute();
-    } catch (Exception $e) {
-      $res->error = $e;
-      http_response_code(422);
-      echo json_encode($res);
-      return;
-    }
-
-    try {
       $res->msg = "Inserted.";
+      echo json_encode($res);
     } catch (Exception $e) {
       $res->error = $e;
-      echo json_encode($res);
       http_response_code(422);
+      echo json_encode($res);
       return;
     }
 
-    echo json_encode($res);
   }
 
   function removeTranslation($enId, $slId, $authToken) {
