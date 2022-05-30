@@ -68,30 +68,29 @@
         sourceWord.language as language,
         sourceWord.word as word,
         sourceWord.altSpellings as altSpellings,
-        sourceWord.type,
         sourceWord.genderExtras,
         sourceWord.notes,
         sourceWord.credit,
         sourceWord.communitySuggestion,
 
         meaning.id as meaningId,
+        meaning.type as meaningType,
         meaning.meaning as meaning,
         meaning.notes as meaningNotes,
-        meaning.priority as meaningPriority,
         meaning.communitySuggestion as meaningCommunitySuggestion,
+        w2m_src.meaning_priority as meaningPriority,
 
         translatedMeaning.id as translatedMeaningId,
         translatedMeaning.meaning as translatedMeaning,
         translatedMeaning.notes as translatedMeaningNotes,
-        translatedMeaning.priority as translatedMeaningPriority,
         translatedMeaning.communitySuggestion as translatedMeaningCommunitySuggestion,
 
         translatedWord.id as translatedWordId,
         translatedWord.word as translatedWord,
         translatedWord.genderExtras as translatedWordGenderExtras,
-        translatedWord.priority as translatedWordPriority,
         translatedWord.credit as translatedWordCredit,
         translatedWord.notes as translatedWordNotes,
+        w2m_dst.wordPriority as translatedWordPriority
 
         category.id as categoryId,
         category.parentId as categoryParentId,

@@ -98,7 +98,7 @@
     // ------------------------------------------------------------------------------------------------- [ BUILD QUERY AND BIND PARAMS
     $values = array();
 
-    $values[] = ":language, :word, :type";
+    $values[] = ":language, :word";
     if (empty($word->altSpellings))       { $values[] = "NULL"; } else { $values[] = ":altSpellings"; }
     if (empty($word->altSpellingsHidden)) { $values[] = "NULL"; } else { $values[] = ":altSpellingsHidden"; }
     if (empty($word->genderExtras))       { $values[] = "NULL"; } else { $values[] = ":genderExtras"; }
@@ -111,11 +111,10 @@
     // Also TODO: priority should be moved to meanings2words table
     if (true)                             { $values[] = "NULL"; } else { $values[] = ":credit_userId"; }
     if (true)                             { $values[] = 0;      } else { $values[] = ":communitySuggestion"; }
-    if (empty($word->priority))           { $values[] = 0;      } else { $values[] = ":priority"; }
 
 
     $sql_insert = "
-      INSERT INTO words (language, word, type, altSpellings, altSpellingsHidden, genderExtras, notes, credit, credit_userId, communitySuggestion, priority)
+      INSERT INTO words (language, word, altSpellings, altSpellingsHidden, genderExtras, notes, credit, credit_userId, communitySuggestion, priority)
         VALUES (" . join(", ", $values) . ");
     ";
 
@@ -123,7 +122,6 @@
 
     $stmt_insert->bindParam(":language", $word->language);
     $stmt_insert->bindParam(":word", $word->word);
-    $stmt_insert->bindParam(":type", $word->type);
 
     if (!empty($word->altSpellings))        { $stmt_insert->bindParam(":altSpellings", $word->altSpellings); }
     if (!empty($word->altSpellingsHidden))  { $stmt_insert->bindParam(":altSpellingsHidden", $word->altSpellingsHidden); }
@@ -132,8 +130,6 @@
     if (!empty($word->credit))              { $stmt_insert->bindParam(":credit", $word->credit); }
     // todo: bind user credit?
     // todo: bind communitySuggestion
-    // todo: move priority to other table, priority should be set during bind in words2meanings table
-    if (!empty($word->priority))            { $stmt_insert->bindParam(":priority", $word->priority); }
 
 
     // insert new value:
@@ -150,7 +146,7 @@
 
     $sql_select_inserted = "
       SELECT
-        id, language, word, type, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion, priority
+        id, language, word, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion
 
       FROM words
 
@@ -254,7 +250,7 @@
     // ------------------------------------------------------------------------------------------------- [ BUILD QUERY AND BIND PARAMS
     $values = array();
 
-    $values[] = ":language, :word, :type";
+    $values[] = ":language, :word";
     if (empty($word->altSpellings))       { $values[] = "altSpellings = NULL"; }        else { $values[] = "altSpellings = :altSpellings"; }
     if (empty($word->altSpellingsHidden)) { $values[] = "altSpellingsHidden = NULL"; }  else { $values[] = "altSpellingsHidden = :altSpellingsHidden"; }
     if (empty($word->genderExtras))       { $values[] = "genderExtras = NULL"; }        else { $values[] = "genderExtras = :genderExtras"; }
@@ -267,8 +263,6 @@
     // Also TODO: priority should be moved to meanings2words table
     if (true)                             { $values[] = "credit_userId = NULL"; }       else { $values[] = "credit_userId = :credit_userId"; }
     if (true)                             { $values[] = "communitySuggestion = 0"; }    else { $values[] = "communitySuggestion = :communitySuggestion"; }
-    if (empty($word->priority))           { $values[] = "priority = 0"; }               else { $values[] = "priority = :priority"; }
-
 
     $sql_update = "
       UPDATE words
@@ -280,7 +274,6 @@
 
     $stmt_update->bindParam(":language", $word->language);
     $stmt_update->bindParam(":word", $word->word);
-    $stmt_update->bindParam(":type", $word->type);
 
     if (!empty($word->altSpellings))        { $stmt_update->bindParam(":altSpellings", $word->altSpellings); }
     if (!empty($word->altSpellingsHidden))  { $stmt_update->bindParam(":altSpellingsHidden", $word->altSpellingsHidden); }
@@ -289,8 +282,6 @@
     if (!empty($word->credit))              { $stmt_update->bindParam(":credit", $word->credit); }
     // todo: bind user credit?
     // todo: bind communitySuggestion
-    // todo: move priority to other table, priority should be set during bind in words2meanings table
-    if (!empty($word->priority))            { $stmt_update->bindParam(":priority", $word->priority); }
 
     $stmt_update->bindParam(":id", $word->id);
 
@@ -306,7 +297,7 @@
     // return the updated word to backend
     $sql_select_updated = "
       SELECT
-        id, language, word, type, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion, priority
+        id, language, word, genderExtras, altSpellings, altSpellingsHidden, notes, credit, credit_userId, communitySuggestion
 
       FROM words
 
