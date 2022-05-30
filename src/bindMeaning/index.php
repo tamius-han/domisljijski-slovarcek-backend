@@ -71,7 +71,7 @@
     if (empty($wordMeaningBind->meaning_priority))  { $values[] = "0"; } else { $values[] = ":meaning_priority"; }
 
     $sql_select_insert = "
-      INSERT INTO translations (meaning_id, word_id, word_priority, meaning_priority)
+      INSERT INTO words2meanings (meaning_id, word_id, word_priority, meaning_priority)
         VALUES (" . join(', ', $values) . ");
     ";
 
