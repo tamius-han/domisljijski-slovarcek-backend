@@ -58,6 +58,31 @@
     // echo json_encode($res);
   }
 
+  /**
+   * Adds a new meaning to the database.
+   *
+   * Required fields:
+   *    - wordId: number
+   *      Word associated with this meaning
+   *
+   *    - meaning: string
+   *      Meaning (short description of the word)
+   *
+   *    - type: number
+   *      Type of word (noun, adjective, verb, ...)
+   *
+   *    - categoryIds: number[]
+   *      Categories this meaning belongs to. If including a sub-category, this array
+   *      must include _all_ parent categories (all the way to the root).
+   *
+   * Optional fields
+   *    - notes: string
+   *      Any notes that go along with this meaning
+   *
+   *    - communitySuggestion
+   *      Is this word a suggestion by community? Should be auto-set to 1, but people
+   *      with high enough permission level should be able to override it
+   */
   function addMeaning($meaning, $authToken) {
     include '../conf/db-config.php';
     include '../lib/auth.php';
@@ -84,12 +109,17 @@
 
     //  --------------------------------------------- DATA VALIDATION  ---------------------------------------------
     // TODO: validate data and stuff
+
     if (
       empty($meaning->wordId)
+      || empty($meaning->meaning)
+      || empty($meaning->type)
       || empty($meaning->categoryIds)
-      || $meaning->categoryIds->length == 0
+      || count($meaning->categoryIds) == 0
     ) {
-      $res->error = "Request is missing a word or category associated with this meaning.";
+      $res->error = "Request is missing something. id of related word (wordId), meaning, type and categoryIds are required fields.";
+
+      $res->submittedObject = $meaning;
       echo json_encode($res);
       return;
     }
@@ -245,8 +275,9 @@
   }
 
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $headers = apache_request_headers();
+    $response = new stdClass();
 
+    $headers = apache_request_headers();
     $json_params = file_get_contents("php://input");
 
     if (strlen($json_params) > 0 && isValidJSON($json_params)) {
@@ -257,17 +288,12 @@
       return;
     }
 
-    $response = new stdClass();
 
     if (isset($headers['Authorization'])) {
-      $response->message="authorization header present!";
-      $response->postJson=$decoded_params;
+      // $response->message="authorization header present!";
+      // $response->postJson=$decoded_params;
 
-      if (empty($decoded_params->id)) {
-        addMeaning($decoded_params, $headers['Authorization']);
-      // } else {
-      //   addMeaning($decoded_params, $headers['Authorization']);
-      }
+      addMeaning($decoded_params, $headers['Authorization']);
     } else {
       $response->errorCode = 403;
       $response->error = "Authorization header not present";
