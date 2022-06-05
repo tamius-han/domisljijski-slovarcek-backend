@@ -24,6 +24,8 @@
 
   include '../conf/db-config.php';
 
+  $res = new stdClass();
+
   try {
     $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -41,6 +43,15 @@
     $meaning = $_GET['m'];
     $translatedWord = $_GET['tw'];
     $translatedMeaning = $_GET['tm'];
+
+    if (!empty($category)) {
+      $categoryArray = explode(',', $category);
+      foreach ($categoryArray as $key => $value) {
+        if (!is_numeric($value)) {
+          unset($categoryArray[$key]);
+        }
+      }
+    }
 
     $page = $_GET['page'];
     $limit = $_GET['limit'];
@@ -116,7 +127,17 @@
         if (!empty($translatedWord))    { $sql_where_array[] = "translatedWord.id = :translatedWordId"; }
       } else {
         if (!empty($search))            { $sql_where_array[] = "(sourceWord.word LIKE CONCAT('%', :search, '%') OR sourceWord.altSpellings LIKE CONCAT('%', :search1, '%') OR sourceWord.altSpellingsHidden LIKE CONCAT('%', :search2, '%'))"; }
-        if (!empty($category))          { $sql_where_array[] = "category.id = :categoryId"; }
+        if (!empty($category))          {
+          $categoryIds = array();
+
+          foreach ($categoryArray as $key => $value) {
+            $categoryIds[] = $value;
+          }
+          $res->categoryIds = $categoryIds;
+          $res->categoryArray = $categoryArray;
+          $sql_where_array[] = "category.id IN (" . join(",", $categoryIds) . ")";
+          $res->categorySqlWhereArray = $sql_where_array;
+        }
         if (!empty($language))          { $sql_where_array[] = "sourceWord.language = :language"; }
       }
 
@@ -199,9 +220,8 @@
           ) AS swltd              ON swltd.id = words.id
       ");
     } catch (Exception $e) {
-      $res = new stdClass();
-
       $res->msg = "failed to query select";
+      // $res->selectQueryRaw = $sql_select_word . $sql_common_join . $sql_order_word;
       $res->err = $e;
       $res->selectQuery = $stmt_select;
       $res->countQuery = $stmt_count;
@@ -213,6 +233,8 @@
 
     try {
       if (!empty($search)) {
+        // $res->arg_search = $search;
+
         $stmt_select->bindParam(":search", $search);
         $stmt_select->bindParam(":search1", $search);
         $stmt_select->bindParam(":search2", $search);
@@ -221,11 +243,16 @@
         $stmt_count->bindParam(":search1", $search);
         $stmt_count->bindParam(":search2", $search);
       }
-      if (!empty($category)) {
-        $stmt_select->bindParam(":categoryId", $category);
-        $stmt_count->bindParam(":categoryId", $category);
-      }
+      // We already insert category filter when building query string
+      // if (!empty($category)) {
+      //   // $res->arg_category = $category;
+
+      //   $stmt_select->bindParam(":categoryId", $category);
+      //   $stmt_count->bindParam(":categoryId", $category);
+      // }
       if (!empty($language)) {
+        // $res->arg_language = $language;
+
         $stmt_select->bindParam(":language", $language);
         $stmt_count->bindParam(":language", $language);
       }
@@ -248,8 +275,6 @@
 
 
     } catch (Exception $e) {
-      $res = new stdClass();
-
       $res->err = $e;
       $res->selectQuery = $stmt_select;
       $res->countQuery = $stmt_count;
@@ -259,7 +284,7 @@
       return;
     }
 
-    $res = new stdClass();
+    $res->selectQuery = $stmt_select;
 
     try {
       if (empty($word)) {
