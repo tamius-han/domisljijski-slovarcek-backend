@@ -67,8 +67,8 @@
     $values = array();
     $values[] = ":meaning_id, :word_id";
 
-    if (empty($wordMeaningBind->word_priority))     { $values[] = "0"; } else { $values[] = ":word_priority"; }
-    if (empty($wordMeaningBind->meaning_priority))  { $values[] = "0"; } else { $values[] = ":meaning_priority"; }
+    if (empty($wordMeaningBind->wordPriority))     { $values[] = "0"; } else { $values[] = ":word_priority"; }
+    if (empty($wordMeaningBind->meaningPriority))  { $values[] = "0"; } else { $values[] = ":meaning_priority"; }
 
     $sql_select_insert = "
       INSERT INTO words2meanings (meaning_id, word_id, word_priority, meaning_priority)
@@ -79,8 +79,8 @@
 
     $stmt_en2si->bindParam(":meaning_id", $wordMeaningBind->meaning_id);
     $stmt_en2si->bindParam(":word_id", $wordMeaningBind->word_id);
-    if (!empty($wordMeaningBind->word_priority))    { $stmt_en2si->bindParam(":word_priority", $wordMeaningBind->word_priority); }
-    if (!empty($wordMeaningBind->meaning_priority))  { $stmt_en2si->bindParam(":meaning_priority", $wordMeaningBind->meaning_priority); }
+    if (!empty($wordMeaningBind->wordPriority))    { $stmt_en2si->bindParam(":word_priority", $wordMeaningBind->wordPriority); }
+    if (!empty($wordMeaningBind->meaningPriority))  { $stmt_en2si->bindParam(":meaning_priority", $wordMeaningBind->meaningPriority); }
 
     // insert new value:
     try {
