@@ -120,12 +120,13 @@
     // insert new value:
     try {
       $stmt_en2si->execute();
-      $res->msg = "Inserted.";
       echo json_encode($res);
     } catch (Exception $e) {
-      $res->error = $e;
+      $res2 = new stdClass();
+      $res2->error = $e;
+      $res2->orgRes = $res;
       http_response_code(422);
-      echo json_encode($res);
+      echo json_encode($res2);
       return;
     }
 

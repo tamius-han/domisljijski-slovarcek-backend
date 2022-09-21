@@ -251,7 +251,7 @@
     }
 
     $stmt_insert = $conn->prepare(
-      $statementStart . join($values, ', ') . ";"
+      $statementStart . join(', ', $values) . ";"
     );
 
     foreach($wordsOrCategories as $i => $item) {
