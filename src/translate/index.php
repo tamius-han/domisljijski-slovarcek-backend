@@ -73,6 +73,29 @@
 
     $skip = $limit * $page;
 
+    /**
+     * Here's how our data looks conceptually:
+     *
+     *    SOURCE WORD     |    source meaning     |   translated meaning   |   TRANSLATION
+     *
+     *    word 1                word 1 meaning 1         word 1 meaning 1       translation 1.1
+     *                                                                          translation 1.2
+     *    word 2          |     word 2 meaning 1    .........................   translation 2.1
+     *                          word 2 meaning 2    .........................   translation 2.2
+     *
+     * We want to impose our LIMIT on source word rather than in translation — i.e. if we LIMIT 2,
+     * we want to get all 4 translations.
+     *
+     * This means we need to do subquery. Subquery needs to do SELECT DISTINCT, in order to get one line per meaning.
+     * doing distinct select will only give us one meaning for word, so we need to do those left joins AGAIN once
+     * we're done with the query.
+     *
+     * Also all filtering needs to be done in the nested query.
+     *
+     * (press F for future me, it's way too late for good descriptions)
+     */
+
+    // This selects all the data
     $sql_select_word = "
       SELECT
         sourceWord.id as id,
@@ -118,13 +141,14 @@
       // build our where statement manually
 
       $sql_where_array = array();
+      $sql_where_array_post = array();
 
       // if ID is provided, where statement has a mildly special case:
       if (!empty($word)) {
         $sql_where_array[] = "sourceWord.id = :wordId";
         if (!empty($meaning))           { $sql_where_array[] = "meaning.id = :meaningId";  }
-        if (!empty($translatedMeaning)) { $sql_where_array[] = "translatedMeaning.id = :translatedMeaningId"; }
-        if (!empty($translatedWord))    { $sql_where_array[] = "translatedWord.id = :translatedWordId"; }
+        if (!empty($translatedMeaning)) { $sql_where_array_post[] = "translatedMeaning.id = :translatedMeaningId"; }
+        if (!empty($translatedWord))    { $sql_where_array_post[] = "translatedWord.id = :translatedWordId"; }
       } else {
         if (!empty($search))            { $sql_where_array[] = "(sourceWord.word LIKE CONCAT('%', :search, '%') OR sourceWord.altSpellings LIKE CONCAT('%', :search1, '%') OR sourceWord.altSpellingsHidden LIKE CONCAT('%', :search2, '%'))"; }
         if (!empty($category))          {
@@ -141,58 +165,64 @@
         if (!empty($language))          { $sql_where_array[] = "sourceWord.language = :language"; }
       }
 
-      $sql_common_join = "
-        FROM
-          words AS sourceWord
-          LEFT JOIN words2meanings AS w2m_src      ON w2m_src.word_id = sourceWord.id
-          LEFT JOIN meanings AS meaning            ON meaning.id = w2m_src.meaning_id
-          LEFT JOIN translations AS t              ON (sourceWord.language = 'en' AND meaning.id = t.meaning_en) OR (sourceWord.language = 'sl' AND meaning.id = t.meaning_sl)
-          LEFT JOIN meanings AS translatedMeaning  ON (sourceWord.language = 'en' AND translatedMeaning.id = t.meaning_sl) OR (sourceWord.language = 'sl' AND translatedMeaning.id = t.meaning_en)
-          LEFT JOIN words2meanings AS w2m_dst      ON w2m_dst.meaning_id = translatedMeaning.id
-          LEFT JOIN words AS translatedWord        ON w2m_dst.word_id = translatedWord.id
-          LEFT JOIN meanings2categories AS m2c     ON m2c.meaning_id = meaning.id
-          LEFT JOIN categories AS category         ON category.id = m2c.category_id
-      ";
-
       // if we query by any combination of params involving word ID, our query
       // can be much simpler
 
-
+      // if sql array is empty, we'll get a syntax error. Instead of fixing it proper,
+      // let's fix it the quick, hacky, ghetto way
       if ( count($sql_where_array) == 0 ) {
-        // if sql array is empty, we'll get a syntax error. Instead of fixing it proper,
-        // let's fix it the quick, hacky, ghetto way
         $sql_where_array[] = "TRUE";
       }
-
-      if (!empty($word)) {
-        $sql_common_join = $sql_common_join . "  WHERE " . join(" AND ", $sql_where_array);
-      } else {
-        $sql_common_join = $sql_common_join . "
-          INNER JOIN (
-            SELECT sourceWord.id
-            FROM words                      AS sourceWord
-              LEFT JOIN words2meanings      AS w2m_src            ON w2m_src.word_id = sourceWord.id
-              LEFT JOIN meanings            AS meaning            ON meaning.id = w2m_src.meaning_id
-              LEFT JOIN translations        AS t                  ON (sourceWord.language = 'en' AND meaning.id = t.meaning_en) OR (sourceWord.language = 'sl' AND meaning.id = t.meaning_sl)
-              LEFT JOIN meanings            AS translatedMeaning  ON (sourceWord.language = 'en' AND translatedMeaning.id = t.meaning_sl) OR (sourceWord.language = 'sl' AND translatedMeaning.id = t.meaning_en)
-              LEFT JOIN words2meanings      AS w2m_dst            ON w2m_dst.meaning_id = translatedMeaning.id
-              LEFT JOIN words               AS translatedWord     ON w2m_dst.word_id = translatedWord.id
-              LEFT JOIN meanings2categories AS m2c                ON m2c.meaning_id = meaning.id
-              LEFT JOIN categories          AS category           ON category.id = m2c.category_id
-            WHERE
-              " . join(" AND ", $sql_where_array) . "
-            GROUP BY
-              sourceWord.id
-            LIMIT " . $skip . ", " . $limit . "
-          )                               AS swltd              ON swltd.id = sourceWord.id
-
-          ";
+      if ( count($sql_where_array_post) == 0 ) {
+        $sql_where_array_post[] = "TRUE";
       }
+
+      // GETS SOURCE WORD. FILTERING HAPPENS HERE
+      $nested_query = "
+        SELECT
+          sourceWord.id as id,
+          sourceWord.language as language,
+          sourceWord.word as word,
+          sourceWord.altSpellings as altSpellings,
+          sourceWord.genderExtras as genderExtras,
+          sourceWord.notes as notes,
+          sourceWord.etymology as etymology,
+          sourceWord.credit as credit,
+          sourceWord.communitySuggestion as communitySuggestion
+
+        FROM words sourceWord
+          LEFT JOIN words2meanings AS w2m_src      ON w2m_src.word_id = sourceWord.id
+          LEFT JOIN meanings AS meaning            ON meaning.id = w2m_src.meaning_id
+          LEFT JOIN meanings2categories AS m2c     ON m2c.meaning_id = meaning.id
+          LEFT JOIN categories AS category         ON category.id = m2c.category_id
+
+        WHERE " . join(" AND ", $sql_where_array) . "
+        GROUP BY sourceWord.id
+        LIMIT " . $skip . ", " . $limit . "
+      ";
+
+
+      // because nested query is missing most of the meanings — and would be missing most of translations —
+      // we have to repeat some joins. This time, we don't use DISTINCT in order to get all of them
+      $sql_common_join = "
+        FROM
+          (". $nested_query . ") as sourceWord
+        LEFT JOIN words2meanings AS w2m_src      ON w2m_src.word_id = sourceWord.id
+        LEFT JOIN meanings AS meaning            ON meaning.id = w2m_src.meaning_id
+        LEFT JOIN translations AS t              ON (sourceWord.language = 'en' AND meaning.id = t.meaning_en) OR (sourceWord.language = 'sl' AND meaning.id = t.meaning_sl)
+        LEFT JOIN meanings AS translatedMeaning  ON (sourceWord.language = 'en' AND translatedMeaning.id = t.meaning_sl) OR (sourceWord.language = 'sl' AND translatedMeaning.id = t.meaning_en)
+        LEFT JOIN words2meanings AS w2m_dst      ON w2m_dst.meaning_id = translatedMeaning.id
+        LEFT JOIN words AS translatedWord        ON w2m_dst.word_id = translatedWord.id
+        LEFT JOIN meanings2categories AS m2c     ON m2c.meaning_id = meaning.id
+        LEFT JOIN categories AS category         ON category.id = m2c.category_id
+
+        WHERE " . join(" AND ", $sql_where_array_post) . "
+      ";
 
       // we only order in select queries, but not in count queries
       $sql_order_word = "
         ORDER BY
-          meaningPriority ASC, translatedWordPriority ASC
+          sourceWord.word ASC, meaningPriority ASC, translatedWordPriority ASC
       ";
 
     // i hope my employer isn't checking my github lol
@@ -200,24 +230,14 @@
     try {
       $stmt_select = $conn->prepare($sql_select_word . $sql_common_join . $sql_order_word );
       $stmt_count = $conn->prepare("
-        SELECT COUNT(*) AS total
-          FROM words
-          INNER JOIN (
-            SELECT sourceWord.id
-            FROM words                      AS sourceWord
-              LEFT JOIN words2meanings      AS w2m_src            ON w2m_src.word_id = sourceWord.id
-              LEFT JOIN meanings            AS meaning            ON meaning.id = w2m_src.meaning_id
-              LEFT JOIN translations        AS t                  ON (sourceWord.language = 'en' AND meaning.id = t.meaning_en) OR (sourceWord.language = 'sl' AND meaning.id = t.meaning_sl)
-              LEFT JOIN meanings            AS translatedMeaning  ON (sourceWord.language = 'en' AND translatedMeaning.id = t.meaning_sl) OR (sourceWord.language = 'sl' AND translatedMeaning.id = t.meaning_en)
-              LEFT JOIN words2meanings      AS w2m_dst            ON w2m_dst.meaning_id = translatedMeaning.id
-              LEFT JOIN words               AS translatedWord     ON w2m_dst.word_id = translatedWord.id
-              LEFT JOIN meanings2categories AS m2c                ON m2c.meaning_id = meaning.id
-              LEFT JOIN categories          AS category           ON category.id = m2c.category_id
-            WHERE
-              " . join(" AND ", $sql_where_array) . "
-            GROUP BY
-              sourceWord.id
-          ) AS swltd              ON swltd.id = words.id
+        SELECT COUNT(DISTINCT sourceWord.id) AS total
+          FROM words                      AS sourceWord
+            LEFT JOIN words2meanings      AS w2m_src            ON w2m_src.word_id = sourceWord.id
+            LEFT JOIN meanings            AS meaning            ON meaning.id = w2m_src.meaning_id
+            LEFT JOIN meanings2categories AS m2c                ON m2c.meaning_id = meaning.id
+            LEFT JOIN categories          AS category           ON category.id = m2c.category_id
+          WHERE
+            " . join(" AND ", $sql_where_array) . "
       ");
     } catch (Exception $e) {
       $res->msg = "failed to query select";
@@ -272,7 +292,6 @@
           $stmt_select->bindParam(":translatedWordId", $translatedWord);
         }
       }
-
 
     } catch (Exception $e) {
       $res->err = $e;
